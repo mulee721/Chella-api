@@ -8,6 +8,7 @@ export class CreateUserDto {
     @IsString()
     password:string;
     @IsString()
+    @IsOptional()
     referredBy:string;
 }
 export class UpdateUserDto{

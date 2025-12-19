@@ -7,29 +7,40 @@ import { User } from "../schemas/users.schema";
 import { UserResponse } from "../responses/users.responses";
 import { CommonUtils } from "src/commons/Util";
 import { access } from "fs";
+import { ReferralService } from "src/referrals/services/referrals.services";
 
 @Injectable()
 export class UserService{
 
-  constructor(
-    @InjectModel(User.name)
-    private readonly userModel: Model<User>
+  constructor( 
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly referralService:ReferralService
   ){}
 
     async registerUser(createUserDto: CreateUserDto){
 
     // all logics wil be done here
     console.log("coming request body",createUserDto)
- //check if user exists
- const existingname=await this.userModel.findOne({
-  username:createUserDto.username.toLocaleLowerCase()
- });
- console.log("existing name:",existingname)
- if(existingname){
-  throw new BadRequestException("user already exists with this username")
- 
- }
+    //check if user exists
+    const existingname=await this.userModel.findOne({
+      username:createUserDto.username.toLocaleLowerCase()
+    });
+    console.log("existing name:",existingname)
+    if(existingname){
+      throw new BadRequestException("user already exists with this username")
+    
+    }
        
+
+        let referringUser = null as any;
+        
+        if (createUserDto.referredBy) {
+            referringUser = await this.userModel.findOne({ referralCode: createUserDto.referredBy});
+
+            if (!referringUser) {
+                throw new BadRequestException('Invalid referral code.');
+            }
+        }
         //hash password
         const hashedPwd= await bcrypt.hash(createUserDto.password,10);        
         //generate refferal
@@ -62,6 +73,19 @@ export class UserService{
         //save to db
         const savedUser = await newUser.save();
 
+        //! We will implement a code to increase amount for referering users
+        if(referringUser){
+            await this.referralService.createReferralTracking(
+                referringUser._id.toString(),
+                savedUser._id.toString()
+            )
+
+            await this.userModel.findByIdAndUpdate(referringUser._id, {
+                totalEarned: referringUser.totalEarned + 20,
+                amount: referringUser.amount + 20,
+                totalReffered: referringUser.totalReffered + 1
+            });
+        }
         //map to our user responsee intercepter
             const UserResponse:UserResponse ={
             id:savedUser._id.toString(),
@@ -75,9 +99,6 @@ export class UserService{
            }
         //send back response
         return UserResponse;
-        return {
-            message:"hey there we are regitering the user"
-        }
     }
 
     //UPDATE THE USER SERVICE****
@@ -143,7 +164,7 @@ export class UserService{
   //get all user
   async getAllUsers(){
 const users =await this.userModel.find();
-//2 if no users found return empty list
+//2 if no users found return empty listneat
 if(!users||users.length ===0){
   return[];
 }

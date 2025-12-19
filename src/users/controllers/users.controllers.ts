@@ -30,7 +30,7 @@ export class UsersController {
     return result;
   }
 
-  @JwtAuthGuard()
+  //@JwtAuthGuard()
   @Get('get-all')
   async getAllUsers(@Req() req: any) {
     console.log('USER INFO:', req.user);
