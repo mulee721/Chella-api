@@ -61,7 +61,7 @@ import { ReferredUserResponse, ReferrerResponse } from "../responses/referrals.r
           const referredUser=referral.referrerdUserId as any;
 
         return {
-        id:referral._id.toString(),
+            id:referral._id.toString(),
             referredUserId:referredUser?._id.toString(),
             referredUserFullname:referredUser?.fullName,
             referredUserUsername:referredUser?.username
